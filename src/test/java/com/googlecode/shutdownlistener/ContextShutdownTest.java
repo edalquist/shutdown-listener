@@ -17,11 +17,10 @@
 package com.googlecode.shutdownlistener;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import com.googlecode.shutdownlistener.ShutdownConfiguration;
-import com.googlecode.shutdownlistener.ShutdownUtility;
 import com.googlecode.shutdownlistener.mock.StaticTrackingShutdownListener;
 import com.googlecode.shutdownlistener.spring.ApplicationContextShutdownWrapper;
 
@@ -31,8 +30,47 @@ import com.googlecode.shutdownlistener.spring.ApplicationContextShutdownWrapper;
  * @version $Revision$
  */
 public class ContextShutdownTest {
-    @Test
-    public void testAddedShutdownHandler() throws Exception {
+    @Before
+    public void setupTest() {
+        ShutdownConfiguration.deleteInstance();
+        StaticTrackingShutdownListener.reset();
+        System.getProperties().remove(ShutdownConfiguration.CONFIGURATION_SYSTEM_PROPERTY);
+    }
+    
+    @Test(timeout=1000)
+    public void testCustomShutdownNoWait() throws Exception {
+        System.setProperty(ShutdownConfiguration.CONFIGURATION_SYSTEM_PROPERTY, "/shutdown-listener-test.properties");
+        
+        final ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("/shutdownTestContext.xml");
+        final ApplicationContextShutdownWrapper shutdownWrapper = new ApplicationContextShutdownWrapper(context);
+        
+        Assert.assertFalse(StaticTrackingShutdownListener.isShutdown());
+        
+        final Thread shutdownCall = new Thread(new Runnable() {
+            
+            public void run() {
+                try {
+                    Thread.sleep(100);
+                    ShutdownUtility.main(new String[] { });
+                    ShutdownUtility.main(new String[] { ShutdownConfiguration.getInstance().getShutdownNoWaitCommand() });
+                }
+                catch (Exception e) {
+                    Assert.fail("failed to shutdown: " + e);
+                }
+            }
+        });
+        shutdownCall.setDaemon(true);
+        shutdownCall.start();
+        
+        shutdownWrapper.waitForShutdown();
+        
+        Assert.assertTrue(StaticTrackingShutdownListener.isShutdown());
+        
+        shutdownWrapper.waitForShutdown();
+    }
+    
+    @Test(timeout=1000)
+    public void testDefaultShutdownAndWait() throws Exception {
         final ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("/shutdownTestContext.xml");
         final ApplicationContextShutdownWrapper shutdownWrapper = new ApplicationContextShutdownWrapper(context);
         
@@ -57,6 +95,38 @@ public class ContextShutdownTest {
         shutdownWrapper.waitForShutdown();
         
         Assert.assertTrue(StaticTrackingShutdownListener.isShutdown());
+        
+        shutdownWrapper.waitForShutdown();
+    }
+    
+    @Test(timeout=1000)
+    public void testDefaultShutdownNoWait() throws Exception {
+        final ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("/shutdownTestContext.xml");
+        final ApplicationContextShutdownWrapper shutdownWrapper = new ApplicationContextShutdownWrapper(context);
+        
+        Assert.assertFalse(StaticTrackingShutdownListener.isShutdown());
+        
+        final Thread shutdownCall = new Thread(new Runnable() {
+            
+            public void run() {
+                try {
+                    Thread.sleep(100);
+                    ShutdownUtility.main(new String[] { });
+                    ShutdownUtility.main(new String[] { ShutdownConfiguration.getInstance().getShutdownNoWaitCommand() });
+                }
+                catch (Exception e) {
+                    Assert.fail("failed to shutdown: " + e);
+                }
+            }
+        });
+        shutdownCall.setDaemon(true);
+        shutdownCall.start();
+        
+        shutdownWrapper.waitForShutdown();
+        
+        Assert.assertTrue(StaticTrackingShutdownListener.isShutdown());
+        
+        shutdownWrapper.waitForShutdown();
     }
 }
 
