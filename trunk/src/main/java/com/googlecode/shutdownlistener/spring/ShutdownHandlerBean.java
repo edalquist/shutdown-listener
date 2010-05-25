@@ -59,7 +59,7 @@ public class ShutdownHandlerBean extends ShutdownHandler implements Initializing
         if (this.shutdownListeners == null) {
             final Map<String, ShutdownListener> shutdownListenerMap = BeanFactoryUtils.beansOfTypeIncludingAncestors(this.applicationContext, ShutdownListener.class);
             this.shutdownListeners = new ArrayList<ShutdownListener>(shutdownListenerMap.values());
-            this.logger.debug("No explicit shutdownListeners configured, using " + this.shutdownListeners.size() + " ShutdownListeners from application context");
+            this.logger.debug("No explicit shutdownListeners configured, using {} ShutdownListeners from application context.", this.shutdownListeners.size());
         }
         
         this.start();
