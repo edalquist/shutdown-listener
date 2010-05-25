@@ -30,6 +30,8 @@ import org.slf4j.LoggerFactory;
  * @version $Revision$
  */
 public final class ShutdownConfiguration {
+    public static final String CONFIGURATION_SYSTEM_PROPERTY = "shutdown-listener.configuration";
+    
     private static ShutdownConfiguration INSTANCE = null;
     
     public synchronized static ShutdownConfiguration getInstance() {
@@ -38,6 +40,10 @@ public final class ShutdownConfiguration {
         }
         
         return INSTANCE;
+    }
+    
+    synchronized static void deleteInstance() {
+        INSTANCE = null;
     }
     
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -49,8 +55,12 @@ public final class ShutdownConfiguration {
     private String statusCommand = "STATUS";
     
     private ShutdownConfiguration() {
-        final InputStream shutdownConfigStream = this.getClass().getResourceAsStream("/spring-shutdown.properties");
+        final String propertiesFile = System.getProperty("shutdown-listener.configuration", "/shutdown-listener.properties");
+        
+        final InputStream shutdownConfigStream = this.getClass().getResourceAsStream(propertiesFile);
         if (shutdownConfigStream != null) {
+            this.logger.debug("Loading configuration from '{}'", propertiesFile);
+            
             final Properties shutdownConfig = new Properties();
             try {
                 shutdownConfig.load(shutdownConfigStream);
@@ -67,8 +77,11 @@ public final class ShutdownConfiguration {
             this.shutdownWaitCommand = shutdownConfig.getProperty("shutdownWaitCommand", this.shutdownWaitCommand);
             this.statusCommand = shutdownConfig.getProperty("statusCommand", this.statusCommand);
         }
+        else {
+            this.logger.debug("Using default configuration, '{}' does not exist in the ClassPath", propertiesFile);
+        }
         
-        this.logger.debug("Created {}", this.toString());
+        this.logger.info("Created {}", this.toString());
     }
     
     private int getProperty(Properties p, String name, int defaultValue) {
