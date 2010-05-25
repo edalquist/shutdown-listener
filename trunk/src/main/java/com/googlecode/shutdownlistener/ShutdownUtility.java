@@ -45,11 +45,12 @@ public class ShutdownUtility {
             command = config.getStatusCommand();
         }
         
-        System.out.println("Calling processor on " + config.getHost() + ":" + config.getPort() + " with command: " + command);
+        System.out.println("Calling " + config.getHost() + ":" + config.getPort() + " with command: " + command);
         
         final InetAddress hostAddress = InetAddress.getByName(config.getHost());
         final Socket shutdownConnection = new Socket(hostAddress, config.getPort());
         try {
+            shutdownConnection.setSoTimeout(5000);
             final BufferedReader reader = new BufferedReader(new InputStreamReader(shutdownConnection.getInputStream()));
             final PrintStream writer = new PrintStream(shutdownConnection.getOutputStream());
             try {
