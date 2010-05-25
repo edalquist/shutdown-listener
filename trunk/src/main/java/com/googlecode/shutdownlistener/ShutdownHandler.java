@@ -96,8 +96,21 @@ public class ShutdownHandler {
         this.internalShutdownListeners.add(shutdownSocketListener);
         
         //Register a shutdown handler
-        Runtime.getRuntime().addShutdownHook(new Thread(new ShutdownHookHandler(), "JVM Shutdown Hook"));
+        final Thread shutdownHook = new Thread(new ShutdownHookHandler(), "JVM Shutdown Hook");
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
         this.logger.debug("Registered JVM shutdown hook");
+        
+        this.internalShutdownListeners.add(new ShutdownListener() {
+            public void shutdown() {
+                Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                logger.debug("Removed JVM shutdown hook");
+            }
+
+            @Override
+            public String toString() {
+                return "JVM Shutdown Hook Remover";
+            }
+        });
     }
     
     /**
@@ -170,9 +183,9 @@ public class ShutdownHandler {
         this.sortShutdownListeners(shutdownListenersClone);
         for (final ShutdownListener shutdownListener : shutdownListenersClone) {
             try {
-                this.logger.info("Calling ShutdownListener: " + shutdownListener);
+                this.logger.info("Calling ShutdownListener: {}", shutdownListener);
                 shutdownListener.shutdown();
-                this.logger.info("ShutdownListener: " + shutdownListener + " complete");
+                this.logger.info("ShutdownListener {} complete", shutdownListener);
             }
             catch (Exception e) {
                 this.logger.warn("ShutdownListener " + shutdownListener + " threw an exception, continuing with shutdown", e);
@@ -185,24 +198,26 @@ public class ShutdownHandler {
      */
     private class ShutdownSocketListener implements Runnable, ShutdownListener {
         private final ServerSocket shutdownSocket;
+        private final InetAddress bindHost;
+        private final int port;
         
         private ShutdownSocketListener(String host, int port) {
-            final InetAddress bindHost;
+            this.port = port;
             try {
-                bindHost = InetAddress.getByName(host);
+                this.bindHost = InetAddress.getByName(host);
             }
             catch (UnknownHostException uhe) {
                 throw new RuntimeException("Failed to create InetAddress for host '" + host  + "'", uhe);
             }
             
             try {
-                this.shutdownSocket = new ServerSocket(port, 10, bindHost);
+                this.shutdownSocket = new ServerSocket(this.port, 10, this.bindHost);
             }
             catch (IOException ioe) {
-                throw new RuntimeException("Failed to create shutdown socket on '" + bindHost + "' and " + port, ioe);
+                throw new RuntimeException("Failed to create shutdown socket on '" + this.bindHost + "' and " + this.port, ioe);
             }
             
-            logger.info("Bound shutdown socket to " + bindHost + ":" + port + " Starting listener thread for shutdown requests.");
+            logger.info("Bound shutdown socket to {}:{}. Starting listener thread for shutdown requests.", this.bindHost, this.port);
         }
 
         /* (non-Javadoc)
@@ -232,14 +247,7 @@ public class ShutdownHandler {
                 }
             }
             finally {
-                if (!shutdownSocket.isClosed()) {
-                    try {
-                        shutdownSocket.close();
-                    }
-                    catch (IOException ioe) {
-                        //Ignore
-                    }
-                }
+                this.shutdown();
             }
         }
         
@@ -247,11 +255,17 @@ public class ShutdownHandler {
             if (!shutdownSocket.isClosed()) {
                 try {
                     shutdownSocket.close();
+                    logger.debug("Closed shutdown socket {}:{}", this.bindHost, this.port);
                 }
                 catch (IOException ioe) {
                     //Ignore
                 }
             }
+        }
+
+        @Override
+        public String toString() {
+            return "ShutdownSocketListener [bindHost=" + bindHost + ", port=" + port + "]";
         }
     }
     
@@ -269,7 +283,7 @@ public class ShutdownHandler {
          * @see java.lang.Runnable#run()
          */
         public void run() {
-            boolean shutdown = false;
+            boolean shutdownNoWait = false;
 
             try {
                 final BufferedReader reader = new BufferedReader(new InputStreamReader(shutdownConnection.getInputStream()));
@@ -288,7 +302,7 @@ public class ShutdownHandler {
                     else if (config.getShutdownNoWaitCommand().equals(recievedCommand)) {
                         logger.info("Recieved request for shutdown");
                         writer.println(new Date() + ": Starting Shutdown and disconnecting shutdown socket");
-                        shutdown = true;
+                        shutdownNoWait = true;
                     }
                     else if (config.getStatusCommand().equals(recievedCommand)) {
                         logger.debug("Recieved request for status");
@@ -313,9 +327,9 @@ public class ShutdownHandler {
                 logger.warn("Exception while hanlding connection to shutdown socket, ignoring", e);
             }
             finally {
-                if (shutdownConnection != null) {
+                if (this.shutdownConnection != null) {
                     try {
-                        shutdownConnection.close();
+                        this.shutdownConnection.close();
                     }
                     catch (IOException ioe) {
                         //Ignore
@@ -323,7 +337,7 @@ public class ShutdownHandler {
                 }
                 
                 //To handle shutdown-no-wait calls
-                if (shutdown) {
+                if (shutdownNoWait) {
                     shutdown();
                 }
             }
