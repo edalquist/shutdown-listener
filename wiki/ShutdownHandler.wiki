@@ -1,4 +1,5 @@
 #summary How to use ShutdownHandler to wait for a shutdown request
+#labels Featured
 
 = !ShutdownHandler =
 
