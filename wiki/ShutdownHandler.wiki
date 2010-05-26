@@ -1,4 +1,4 @@
-#summary How to use !ShutdownHandler to wait for a shutdown request
+#summary How to use ShutdownHandler to wait for a shutdown request
 
 = !ShutdownHandler =
 
