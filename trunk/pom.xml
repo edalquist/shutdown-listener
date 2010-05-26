@@ -3,7 +3,7 @@
 	<groupId>com.googlecode.shutdown-listener</groupId>
 	<artifactId>shutdown-listener</artifactId>
 	<name>Shutdown Listener</name>
-	<version>1.0.0-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<description>Utilitiy for graceful shutdown of a Java application</description>
 	<url>http://code.google.com/p/shutdown-listener/</url>
 
@@ -24,9 +24,9 @@
 	</licenses>
     
     <scm>
-        <connection>scm:svn:http://shutdown-listener.googlecode.com/svn/trunk/</connection>
-        <developerConnection>scm:svn:https://shutdown-listener.googlecode.com/svn/trunk/</developerConnection>
-        <url>http://shutdown-listener.googlecode.com/svn/trunk/</url>
+        <connection>scm:svn:http://shutdown-listener.googlecode.com/svn/tags/shutdown-listener-1.0.0</connection>
+        <developerConnection>scm:svn:https://shutdown-listener.googlecode.com/svn/tags/shutdown-listener-1.0.0</developerConnection>
+        <url>http://shutdown-listener.googlecode.com/svn/tags/shutdown-listener-1.0.0</url>
     </scm>
     
     <issueManagement>
